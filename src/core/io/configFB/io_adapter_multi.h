@@ -21,7 +21,7 @@ namespace forte {
 
 #define ADAPTER_CTOR_FOR_IO_MULTI(fbclass) \
  fbclass(CStringDictionary::TStringId paAdapterInstanceName, CResource *paSrcRes, bool paIsPlug) : \
- IOConfigFBMultiAdapter( (const TForteUInt8* const) &scmSlaveConfigurationIO, scmSlaveConfigurationIONum, paSrcRes, &scm_stFBInterfaceSpecSocket, paAdapterInstanceName, &scm_stFBInterfaceSpecPlug, paIsPlug, m_anFBConnData, m_anFBVarsData)
+ IOConfigFBMultiAdapter( (const TForteUInt8*) &scmSlaveConfigurationIO, scmSlaveConfigurationIONum, paSrcRes, &scm_stFBInterfaceSpecSocket, paAdapterInstanceName, &scm_stFBInterfaceSpecPlug, paIsPlug, m_anFBConnData, m_anFBVarsData)
 
       class IOConfigFBMultiAdapter : public CAdapter {
         public:

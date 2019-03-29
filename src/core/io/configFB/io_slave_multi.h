@@ -24,7 +24,7 @@ namespace forte {
 
 #define FUNCTION_BLOCK_CTOR_FOR_IO_MULTI_SLAVE(fbclass, fbBaseClass, type) \
  fbclass(const CStringDictionary::TStringId paInstanceNameId, CResource *paSrcRes) : \
- fbBaseClass( (const TForteUInt8* const) &scmSlaveConfigurationIO, scmSlaveConfigurationIONum, type, paSrcRes, &scm_stFBInterfaceSpec, paInstanceNameId, m_anFBConnData, m_anFBVarsData)
+ fbBaseClass( (const TForteUInt8*) &scmSlaveConfigurationIO, scmSlaveConfigurationIONum, type, paSrcRes, &scm_stFBInterfaceSpec, paInstanceNameId, m_anFBConnData, m_anFBVarsData)
 
       class IOConfigFBMultiSlave : public IOConfigFBBase {
         public:

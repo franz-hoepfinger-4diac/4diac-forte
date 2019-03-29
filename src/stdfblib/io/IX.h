@@ -89,6 +89,8 @@ private:
 
   void executeEvent(int pa_nEIID);
 
+  bool onChange();
+
 public:
   FUNCTION_BLOCK_CTOR_WITH_BASE_CLASS(FORTE_IX, CProcessInterface){
   };

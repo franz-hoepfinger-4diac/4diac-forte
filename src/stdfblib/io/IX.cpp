@@ -63,5 +63,8 @@ void FORTE_IX::executeEvent(int pa_nEIID){
   }
 }
 
-
+bool FORTE_IX::onChange() {
+  sendOutputEvent(scm_nEventINDID);
+  return ProcessInterface::onChange();
+}
 
