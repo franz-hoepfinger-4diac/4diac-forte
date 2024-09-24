@@ -29,7 +29,7 @@ class PLC01A1Controller : public forte::core::io::IODevicePollController {
         uint8_t mOffset;
         uint8_t mPosition;
 
-        HandleDescriptor(CIEC_WSTRING const &paId, forte::core::io::IOMapper::Direction paDirection, uint8_t paOffset, uint8_t paPosition) :
+        HandleDescriptor(std::string const &paId, forte::core::io::IOMapper::Direction paDirection, uint8_t paOffset, uint8_t paPosition) :
             forte::core::io::IODeviceController::HandleDescriptor(paId, paDirection), mOffset(paOffset), mPosition(paPosition) {
 
         }

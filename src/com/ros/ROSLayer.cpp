@@ -202,7 +202,7 @@ EComResponse CROSLayer::sendData(void *, unsigned int){
         std_msgs::String ROSValue;
 
         CIEC_STRING ciecString = *(CIEC_STRING *) DataArray;
-        const char *const buf = ciecString.getValue();
+        const char *const buf = ciecString.c_str();
         std::size_t len = std::strlen(buf);
         std::string tmpString(buf, 0, len);
 

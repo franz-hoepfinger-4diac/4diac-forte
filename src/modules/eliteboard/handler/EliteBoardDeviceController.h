@@ -33,7 +33,7 @@ public:
     GPIO_TypeDef *mGPIO_Port;
     uint16_t mPin;
 
-    EliteBoardHandleDescriptor(CIEC_WSTRING const &paId,
+    EliteBoardHandleDescriptor(std::string const &paId,
                          forte::core::io::IOMapper::Direction paDirection,
                          GPIO_TypeDef* paGPIO_Port, uint16_t paPin)
         : HandleDescriptor(paId, IOMapper::UnknownDirection),

@@ -47,7 +47,7 @@ class PLCnextDeviceController : public forte::core::io::IODeviceMultiController 
             HandleType mType;
             uint16_t mPosition;
 
-            HandleDescriptor(CIEC_WSTRING const& paId, forte::core::io::IOMapper::Direction paDirection, int paSlaveIndex, uint16_t position, HandleType paType) :
+            HandleDescriptor(std::string const &paId, forte::core::io::IOMapper::Direction paDirection, int paSlaveIndex, uint16_t position, HandleType paType) :
                 forte::core::io::IODeviceMultiController::HandleDescriptor(paId, paDirection, paSlaveIndex), mPosition(position), mType(paType) {
             }
     };
