@@ -12,15 +12,9 @@
 #      - initial API and implementation and/or initial documentation
 #############################################################################
 
-add_subdirectory(arithmetic)
-add_subdirectory(bistableElements)
-add_subdirectory(bitwiseOperators)
-add_subdirectory(booleanOperators)
-add_subdirectory(charString)
-add_subdirectory(comparison)
-add_subdirectory(conversion)
-add_subdirectory(counters)
-add_subdirectory(edgeDetection)
-add_subdirectory(numerical)
-add_subdirectory(selection)
-add_subdirectory(timers)
+target_sources(forte-iec61131-3 PRIVATE
+        GEN_AND_BOOL_fbt.cpp
+        GEN_OR_BOOL_fbt.cpp
+        GEN_XOR_BOOL_fbt.cpp
+        genboolbase_fbt.cpp
+)
