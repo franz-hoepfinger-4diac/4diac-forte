@@ -99,7 +99,9 @@ namespace forte::io {
       if (var_QI) {
         var_QO = initialise(paECET);
       } else {
-        var_QO = deinitialise();
+        // deinitialise() already resets var_QO to false_BOOL itself via dropHandle();
+        // assigning its return value here too was a redundant second write.
+        deinitialise();
       }
       sendOutputEvent(scmEventINITOID, paECET);
     }
