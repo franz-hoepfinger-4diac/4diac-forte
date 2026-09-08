@@ -159,6 +159,7 @@ namespace forte {
       protected:
       private:
         static const TForteByte scmNull = 5;
+        static const TForteByte scmStructTag = +e_APPLICATION + +e_CONSTRUCTED + 1;
         static const TForteByte csmDataTags[][2];
 
         static const std::set<CIEC_ANY::EDataTypeID> scmSimpleEncodableDataTypes;

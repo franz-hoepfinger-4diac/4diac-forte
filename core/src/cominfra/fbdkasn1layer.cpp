@@ -317,10 +317,7 @@ namespace forte::com_infra {
 
     switch (eDataType) {
       case CIEC_ANY::e_ANY: serializeTag(paBytes, paCIECData.unwrap()); break;
-      case CIEC_ANY::e_STRUCT:
-        // get ASN1-tag from implementing datatype for STRUCT-datatypes
-        paBytes[0] = ((CIEC_STRUCT &) paCIECData).getASN1StructType();
-        break;
+      case CIEC_ANY::e_STRUCT: paBytes[0] = scmStructTag; break;
 #ifdef FORTE_SUPPORT_CUSTOM_SERIALIZABLE_DATATYPES
       case CIEC_ANY::e_External: paBytes[0] = paCIECData.getTag(); break;
 #endif /* FORTE_SUPPORT_CUSTOM_SERIALIZABLE_DATATYPES */
@@ -585,7 +582,7 @@ namespace forte::com_infra {
           static_cast<CIEC_BOOL &>(paCIECData) = CIEC_BOOL((csmDataTags[CIEC_ANY::e_BOOL][0] == paByte));
         }
         break;
-      case CIEC_ANY::e_STRUCT: bRetVal = (static_cast<CIEC_STRUCT &>(paCIECData).getASN1StructType() == paByte); break;
+      case CIEC_ANY::e_STRUCT: bRetVal = (scmStructTag == paByte); break;
 #ifdef FORTE_SUPPORT_CUSTOM_SERIALIZABLE_DATATYPES
       case CIEC_ANY::e_External: bRetVal = paCIECData.deserializeTag(paByte); break;
 #endif /* FORTE_SUPPORT_CUSTOM_SERIALIZABLE_DATATYPES */
