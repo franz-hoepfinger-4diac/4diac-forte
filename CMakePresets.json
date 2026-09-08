@@ -75,6 +75,10 @@
           "type": "BOOL",
           "value": "ON"
         },
+        "FORTE_MODULE_SAFEARITHMETIC": {
+          "type": "BOOL",
+          "value": "ON"
+        },
         "FORTE_MODULE_SIGNALPROCESSING": {
           "type": "BOOL",
           "value": "ON"
