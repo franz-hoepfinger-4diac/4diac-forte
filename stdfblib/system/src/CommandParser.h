@@ -19,125 +19,128 @@
 
 #include <string>
 
-namespace forte {
-  class CDevice;
+namespace forte::iec61499::system {
 
-  namespace iec61499::system {
-
-    class CommandParser {
-
+  namespace detail {
+    class CommandScanner {
       public:
-        CommandParser(CDevice &paDevice);
+        CommandScanner(std::string_view paRemaining);
 
-        /**
-         * @brief Parse and executes a command on a destination in a device
-         *
-         * @param paDest destination where to executed the command
-         * @param paCommand the command to be executed
-         * @param paDevice device where to execute the command
-         * @return EMGMResponse response of the execution of the command
-         */
-        EMGMResponse parseAndExecuteMGMCommand(const char *const paDest, char *paCommand);
-
-        /*! \brief Generate a response string according to the previous executed command
-         *
-         * @param paResponse generated response, the given string is used to reduce memory load on the system
-         */
-        void generateResponse(CIEC_STRING &aResponse);
+        void skipWhiteSpace();
+        bool consume(std::string_view paToConsume);
+        std::string_view takeUntil(char paDelimiter);
+        char peek() const;
+        bool empty() const;
 
       private:
-        SManagementCMD mCommand;
-
-        EMGMResponse mLastResponse{EMGMResponse::InvalidObject};
-
-        CDevice &mDevice;
-
-        /*! \brief Parse the given request header to determine the ID and the requested command
-         *
-         * \param paRequestString data of the request
-         * \param paCommand the command structure for holding command information
-         * \return pointer to the next part of the command zero on error
-         */
-        char *parseRequest(char *paRequestString);
-
-        /*! \brief Parse the given request that is left after parsing the header to parse FB data
-         *
-         * \param paRequestPartLeft  data of the request that has been left after parsing the header
-         * \param paCommand the command structure for holding command information
-         * \return true if the FB data could be parsed
-         */
-        bool parseFBData(char *paRequestPartLeft);
-
-#ifdef FORTE_DYNAMIC_TYPE_LOAD
-
-        /*! \brief Parse the given request that is left after parsing the header to parse FB or Adapter type
-         *
-         * \param paRequestPartLeft  data of the request that has been left after parsing the header
-         * \param paCommand the command structure for holding command information
-         * \param pa_requestType the type that should be searched
-         * \return true if the FB type could be parsed
-         */
-        bool parseXType(char *paRequestPartLeft, const char *paRequestType);
-#endif // FORTE_DYNAMIC_TYPE_LOAD
-
-        /*! \brief Parse the given request that is left after parsing the header to parse connection data
-         *
-         * \param paRequestPartLeft   data of the request that has been left after parsing the header
-         * \param paCommand the command structure for holding command information
-         * \return true if the connection data could be parsed
-         */
-        bool parseConnectionData(char *paRequestPartLeft);
-        bool parseWriteConnectionData(char *paRequestPartLeft);
-
-        void parseCreateData(char *paRequestPartLeft);
-        void parseDeleteData(char *paRequestPartLeft);
-        //! Check if an FB is given for a state change command (i.e., START, STOP, KILL, RESET)
-        void parseAdditionalStateCommandData(char *paRequestPartLeft);
-        void parseReadData(char *paRequestPartLeft);
-        void parseWriteData(char *paRequestPartLeft);
-
-        void parseQueryData(char *paRequestPartLeft);
-        void parseQueryTypes(std::string_view paRequestPartLeft,
-                             EMGMCommandType paSingleQueryCMD,
-                             EMGMCommandType paListQueryCMD);
-        void generateQueryResponse(CIEC_STRING &paResponse);
-
-        /*! \brief parse a hierarchical identifier list
-         *
-         * The identifiers are separated  by '.' and the end character for the list is '\"'
-         *
-         * @param paIdentifierStart pointer to the start of the identifier that will be parsed
-         * @param paIdentifier identifier vector where to write the parsed identifiers to
-         * @return number of bytes used from the character array or -1 if the identifier could not be parsed
-         */
-        int parseIdentifier(char *paIdentifierStart, TNameIdentifier &paIdentifier);
-
-        /*! \brief Parse the name of the type
-         *
-         * @param paCmdString string containing the type name that will be parsed
-         * @param paIdentifier identifier vector where to write the parsed identifiers to
-         * @param paTypeHash  buffer for storing the type hash if present
-         * @return number of bytes used from the character array or -1 if the identifier could not be parsed
-         */
-        int parseTypeName(const std::string_view paCmdString, TNameIdentifier &paIdentifier, std::string &paTypeHash);
-
-        bool parseMonitoringData(char *paRequestPartLeft);
-        void generateMonitorResponse(CIEC_STRING &paResponse);
-
-        /*! \brief Generate a short response string according to the previous executed command
-         *
-         * @param paResponse generated response, the given string is used to reduce memory load on the system
-         */
-        void generateShortResponse(CIEC_STRING &paResponse);
-
-        /*! \brief Generate a response string according to the previous executed command
-         *
-         * @param paResponse generated response, the given string is used to reduce memory load on the system
-         */
-        void generateLongResponse(CIEC_STRING &paResponse);
-
-        void appendIdentifierName(CIEC_STRING &paDest, TNameIdentifier &paIdentifier);
+        std::string_view mRemaining;
     };
+  } // namespace detail
 
-  } // namespace iec61499::system
-} // namespace forte
+  class CommandParser {
+
+    public:
+      CommandParser(SManagementCMD &paCommand);
+
+      /**
+       * @brief Parse a command
+       *
+       * @param paDest destination where to executed the command
+       * @param paCommand the command to be executed
+       * @param paDevice device where to execute the command
+       * @return EMGMResponse response of the execution of the command
+       */
+      EMGMResponse parseMGMCommand(std::string_view paDest, std::string_view paCommand);
+
+      /*! \brief Generate a response string according to the previous executed command
+       *
+       * @param paResponseText generated response, the given string is used to reduce memory load on the system
+       * @param paResponse response provided by the parser or device management
+       */
+      void generateResponse(CIEC_STRING &paResponseText, EMGMResponse paResponse);
+
+    private:
+      SManagementCMD &mCommand;
+
+      /*! \brief Parse the given request header to determine the ID and the requested command
+       *
+       * \param paScanner reference to the scanner with the command string to parse
+       * \return EMGMResponse::Ready if a request tag could be correctly parsed else an according error response
+       */
+      EMGMResponse parseRequest(detail::CommandScanner &paScanner);
+
+      /*! \brief Parse the given request that is left after parsing the header to parse FB data
+       *
+       * \param paScanner reference to the scanner with the command string to parse
+       * \return EMGMResponse::Ready if FB data could be parsed
+       */
+      EMGMResponse parseFBData(detail::CommandScanner &paScanner);
+
+      /*! \brief Parse the given request that is left after parsing the header to parse connection data
+       *
+       * \param paScanner reference to the scanner with the connection string to parse
+       * \return EMGMResponse::Ready if connection data could be parsed
+       */
+      EMGMResponse parseConnectionData(detail::CommandScanner &paScanner);
+      EMGMResponse parseConnectionContent(detail::CommandScanner &paScanner);
+
+      EMGMResponse parseCreateData(detail::CommandScanner &paScanner);
+      EMGMResponse parseDeleteData(detail::CommandScanner &paScanner);
+      //! Check if an FB is given for a state change command (i.e., START, STOP, KILL, RESET)
+      EMGMResponse parseAdditionalStateCommandData(detail::CommandScanner &paScanner);
+      EMGMResponse parseReadData(detail::CommandScanner &paScanner);
+      EMGMResponse parseWriteData(detail::CommandScanner &paScanner);
+
+      EMGMResponse parseQueryData(detail::CommandScanner &paScanner);
+      EMGMResponse parseQueryTypes(detail::CommandScanner &paScanner,
+                                   EMGMCommandType paSingleQueryCMD,
+                                   EMGMCommandType paListQueryCMD);
+      void generateQueryResponse(CIEC_STRING &paResponse);
+
+      /*! \brief parse a hierarchical identifier list
+       *
+       * The identifiers are separated  by '.'
+       *
+       * @param paIdentifierString string value of the identifier
+       * @param paIdentifier identifier vector where to write the parsed identifiers to
+       * @param paAllowEmptyLastSegment allow the final segment (after the last '.') to be empty,
+       *        for identifiers whose last segment names a port rather than an FB instance -- IEC
+       *        61131-3 Functions use the empty string as the name of their return-value output
+       *        port, so a Connection's Source can legitimately end in '.'. Not allowed by default,
+       *        since e.g. an FB instance name or a Connection's Destination must never be empty.
+       * @return EMGMResponse::Ready if all segments could be parsed and added to the name identifier
+       */
+      EMGMResponse parseIdentifier(std::string_view paIdentifierString,
+                                   TNameIdentifier &paIdentifier,
+                                   bool paAllowEmptyLastSegment = false);
+
+      /*! \brief Parse the name of the type
+       *
+       * @param paTypeString string of the type name
+       * @param paIdentifier identifier vector where to write the parsed identifiers to
+       * @param paTypeHash  buffer for storing the type hash if present
+       * @return true when type name is correctly parsed and added to the identifier
+       */
+      bool parseTypeName(const std::string_view paTypeString, TNameIdentifier &paIdentifier, std::string &paTypeHash);
+
+      EMGMResponse parseMonitoringData(detail::CommandScanner &paScanner);
+      void generateMonitorResponse(CIEC_STRING &paResponseText, EMGMResponse paResponse);
+
+      /*! \brief Generate a short response string according to the previous executed command
+       *
+       * @param paResponseText generated response, the given string is used to reduce memory load on the system
+       * @param paResponse response provided by the parser or device management
+       */
+      void generateShortResponse(CIEC_STRING &paResponseText, EMGMResponse paResponse);
+
+      /*! \brief Generate a response string according to the previous executed command
+       *
+       * @param paResponseText generated response, the given string is used to reduce memory load on the system
+       * @param paResponse response provided by the parser or device management
+       */
+      void generateLongResponse(CIEC_STRING &paResponseText, EMGMResponse paResponse);
+
+      void appendIdentifierName(CIEC_STRING &paDest, TNameIdentifier &paIdentifier);
+  };
+
+} // namespace forte::iec61499::system

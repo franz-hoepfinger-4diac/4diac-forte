@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include "DEV_MGR.h"
+#include "CommandParser.h"
 #include "ForteBootFileLoader_config.h"
 #include "forte/device.h"
 #include "ForteBootFileLoader.h"
@@ -56,7 +57,7 @@ namespace forte::iec61499::system {
       if constexpr (cgSupportBootFile) {
         if ((true == QI()) && (false == QO())) {
           // this is the first time init is called try to load a boot file
-          ForteBootFileLoader loader([this](const char *const paDest, char *paCommand) -> bool {
+          ForteBootFileLoader loader([this](std::string_view paDest, std::string_view paCommand) -> bool {
             return this->executeCommand(paDest, paCommand);
           });
           if (loader.needsExit()) {
@@ -80,19 +81,18 @@ namespace forte::iec61499::system {
   }
 
   void DEV_MGR::executeRQST() {
-    char *request = new char[RQST().length() + 1];
-    strcpy(request, RQST().getStorage().c_str());
-
-    mCommandParser.parseAndExecuteMGMCommand(DST().getStorage().c_str(), request);
-    mCommandParser.generateResponse(RESP());
-
-    delete[] (request);
+    CommandParser parser(mCommand);
+    EMGMResponse response = parser.parseMGMCommand(DST().getStorage(), RQST().getStorage());
+    if (response == EMGMResponse::Ready) {
+      response = mDevice.executeMGMCommand(mCommand);
+    }
+    parser.generateResponse(RESP(), response);
   }
 
   DEV_MGR::DEV_MGR(StringId paInstanceNameId, CFBContainer &paContainer) :
       CCommFB(paInstanceNameId, paContainer, com_infra::e_Server),
-      mDevice(*paContainer.getDevice()),
-      mCommandParser(mDevice) {
+      mDevice(*paContainer.getDevice()) {
+    mCommand.mAdditionalParams.reserve(255);
     getGenInterfaceSpec() = cFBInterfaceSpec;
   }
 
@@ -106,8 +106,13 @@ namespace forte::iec61499::system {
 
   DEV_MGR::~DEV_MGR() = default;
 
-  bool DEV_MGR::executeCommand(const char *const paDest, char *paCommand) {
-    EMGMResponse eResp = mCommandParser.parseAndExecuteMGMCommand(paDest, paCommand);
+  bool DEV_MGR::executeCommand(std::string_view paDest, std::string_view paCommand) {
+    EMGMResponse eResp = CommandParser(mCommand).parseMGMCommand(paDest, paCommand);
+
+    if (eResp == EMGMResponse::Ready) {
+      eResp = mDevice.executeMGMCommand(mCommand);
+    }
+
     if (eResp != EMGMResponse::Ready) {
       DEVLOG_ERROR("Boot file error. DEV_MGR says error is %s\n", forte::mgm_cmd::getResponseText(eResp).data());
     }
