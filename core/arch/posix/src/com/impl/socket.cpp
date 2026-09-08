@@ -42,6 +42,7 @@ namespace forte::com::impl {
     }
 
     if (net::setNonBlocking(sock)) {
+      ::close(sock);
       return ComResult::Unknown;
     }
 

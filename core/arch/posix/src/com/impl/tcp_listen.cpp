@@ -28,6 +28,20 @@ namespace forte::com::impl {
     [[maybe_unused]] ComChannelFactory<ComBuffer>::EntryImpl<TCPListenChannel> entry("tcp_listen"_STRID);
   }
 
+  TCPListenChannel::~TCPListenChannel() {
+    if (mConnectionSocket >= 0) {
+      ::close(mConnectionSocket);
+    }
+  }
+
+  ComResult TCPListenChannel::close() {
+    if (mConnectionSocket >= 0) {
+      ::close(mConnectionSocket);
+      mConnectionSocket = -1;
+    }
+    return SocketChannel::close();
+  }
+
   int TCPListenChannel::socket(const std::string_view paConfigString) {
     addrinfo hints{};
     hints.ai_family = AF_UNSPEC;
@@ -57,7 +71,12 @@ namespace forte::com::impl {
   ssize_t TCPListenChannel::recv() {
     if (mConnectionSocket < 0) {
       mConnectionSocket = accept(getSocket(), nullptr, nullptr);
-      if (mConnectionSocket < 0 || net::setNonBlocking(mConnectionSocket)) {
+      if (mConnectionSocket < 0) {
+        return -1;
+      }
+      if (net::setNonBlocking(mConnectionSocket)) {
+        ::close(mConnectionSocket);
+        mConnectionSocket = -1;
         return -1;
       }
     }

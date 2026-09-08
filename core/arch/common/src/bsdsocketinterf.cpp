@@ -225,6 +225,7 @@ namespace forte::arch {
 #ifdef __APPLE__
         if (0 > setsockopt(nSocket, SOL_SOCKET, SO_REUSEPORT, (char *) &nReuseAddrVal, sizeof(nReuseAddrVal))) {
           DEVLOG_ERROR("CBSDSocketInterface: setsockopt(SO_REUSEPORT) failed: %s\n", strerror(errno));
+          close(nSocket);
           return nRetVal;
         }
 #endif
@@ -258,9 +259,11 @@ namespace forte::arch {
           nRetVal = nSocket;
         } else {
           DEVLOG_ERROR("CBSDSocketInterface: bind() failed: %s\n", strerror(errno));
+          close(nSocket);
         }
       } else {
         DEVLOG_ERROR("CBSDSocketInterface: setsockopt(SO_REUSEADDR) failed: %s\n", strerror(errno));
+        close(nSocket);
       }
     } else {
       DEVLOG_ERROR("CBSDSocketInterface: Couldn't create socket: %s\n", strerror(errno));

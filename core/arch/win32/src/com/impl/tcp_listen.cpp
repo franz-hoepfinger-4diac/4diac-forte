@@ -24,6 +24,20 @@ namespace forte::com::impl {
     [[maybe_unused]] ComChannelFactory<ComBuffer>::EntryImpl<TCPListenChannel> entry("tcp_listen"_STRID);
   }
 
+  TCPListenChannel::~TCPListenChannel() {
+    if (mConnectionSocket != INVALID_SOCKET) {
+      ::closesocket(mConnectionSocket);
+    }
+  }
+
+  ComResult TCPListenChannel::close() {
+    if (mConnectionSocket != INVALID_SOCKET) {
+      ::closesocket(mConnectionSocket);
+      mConnectionSocket = INVALID_SOCKET;
+    }
+    return SocketChannel::close();
+  }
+
   SOCKET TCPListenChannel::socket(const std::string_view paConfigString) {
     ADDRINFOA hints{};
     hints.ai_family = AF_UNSPEC;
@@ -55,7 +69,12 @@ namespace forte::com::impl {
   std::size_t TCPListenChannel::recv() {
     if (mConnectionSocket == INVALID_SOCKET) {
       mConnectionSocket = WSAAccept(getSocket(), nullptr, nullptr, nullptr, 0);
-      if (mConnectionSocket == INVALID_SOCKET || net::setNonBlocking(mConnectionSocket)) {
+      if (mConnectionSocket == INVALID_SOCKET) {
+        return static_cast<std::size_t>(-1);
+      }
+      if (net::setNonBlocking(mConnectionSocket)) {
+        ::closesocket(mConnectionSocket);
+        mConnectionSocket = INVALID_SOCKET;
         return static_cast<std::size_t>(-1);
       }
     }

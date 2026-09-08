@@ -1,6 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2010 ACIN, Profactor GmbH, AIT, fortiss GmbH, OFFIS e.V., HIT robot group
- *               Samator Indo Gas, Primetals Technologies Austria GmbH
+ *               Samator Indo Gas, Primetals Technologies Austria GmbH, HR Agrartechnik GmbH
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
@@ -14,6 +14,7 @@
  *  Zhao Xin - fix socket resource leakage
  *  Ketut Kumajaya - switch to the Unicode version of WSAStringToAddress
  *  Markus Meingast - add logging of actual tcp port being used
+ *  Franz Höpfinger - set SO_EXCLUSIVEADDRUSE to avoid port hijacking
  *******************************************************************************/
 
 #include "forte/arch/sockhand.h" //needs to be first pulls in the platform specific includes
@@ -70,11 +71,12 @@ namespace forte::arch {
     stSockAddr.sin_port = htons(paPort);
     stSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    int nOptVal = 1;
-    if (setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char *) &nOptVal, sizeof(nOptVal)) == SOCKET_ERROR) {
+    if (int nOptVal = 1;
+        setsockopt(nSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *) &nOptVal, sizeof(nOptVal)) == SOCKET_ERROR) {
       LPSTR pacErrorMessage = getErrorMessage(WSAGetLastError());
-      DEVLOG_ERROR("CWin32SocketInterface: could not set socket option SO_REUSEADDR:  %s\n", pacErrorMessage);
+      DEVLOG_ERROR("CWin32SocketInterface: could not set socket option SO_EXCLUSIVEADDRUSE:  %s\n", pacErrorMessage);
       LocalFree(pacErrorMessage);
+      closeSocket(nSocket);
       return nRetVal;
     }
 
@@ -240,8 +242,13 @@ namespace forte::arch {
     TSocketDescriptor nSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
     if (INVALID_SOCKET != nSocket) {
-      int nReuseAddrVal = 1;
-      if (0 <= setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char *) &nReuseAddrVal, sizeof(nReuseAddrVal))) {
+      // Intentionally SO_REUSEADDR here, NOT SO_EXCLUSIVEADDRUSE: this socket binds INADDR_ANY:paPort
+      // and then joins a multicast group below. SO_EXCLUSIVEADDRUSE would let only one process/FB on
+      // this machine ever bind that port, so a second multicast subscriber on the same group/port
+      // would fail to open - breaking the pub/sub UDP multicast pattern this function exists for.
+      // Matches CBSDSocketInterface::openUDPReceivePort, which uses SO_REUSEADDR for the same reason.
+      // Do not "fix" this back to SO_EXCLUSIVEADDRUSE without re-reading this comment.
+      if (int nOptVal = 1; 0 <= setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char *) &nOptVal, sizeof(nOptVal))) {
         struct sockaddr_in stSockAddr = {};
         stSockAddr.sin_family = AF_INET;
         stSockAddr.sin_port = htons(paPort);
@@ -279,10 +286,14 @@ namespace forte::arch {
           LocalFree(pacErrorMessage);
         }
       } else {
+        // This branch is SO_REUSEADDR failing, not SO_EXCLUSIVEADDRUSE - see the comment above the
+        // setsockopt() call for why this UDP multicast receive socket deliberately does not use
+        // SO_EXCLUSIVEADDRUSE. Keep this log text in sync with the option actually being set.
         int nLastError = WSAGetLastError();
         LPSTR pacErrorMessage = getErrorMessage(nLastError);
         DEVLOG_ERROR("CWin32SocketInterface: setsockopt(SO_REUSEADDR) failed: %d - %s\n", nLastError, pacErrorMessage);
         LocalFree(pacErrorMessage);
+        closeSocket(nSocket);
       }
     } else {
       int nLastError = WSAGetLastError();
