@@ -7,11 +7,16 @@
  *** SPDX-License-Identifier: EPL-2.0
  *** FORTE Library Element
  ***
- *** This file was generated using the 4DIAC FORTE Export Filter V1.0.x NG!
+ *** This file was generated using the 4DIAC FORTE Export Filter 3.2.100.202608272003!
  ***
  *** Name: DualHysteresis
- *** Description: 2-way conversion of Analog to Digital with Hysteresis
+ *** Description: 2-way conversion of Analog to Digital with Hysteresis (Switch-on = MI +/- (ABS(DEAD) +
+ * ABS(HYSTERESIS)), Switch-off = MI +/- ABS(DEAD))
  *** Version:
+ ***     3.1: 2026-09-11/Franz Höpfinger - HR Agrartechnik GmbH - clarify description/comments and wrap DEAD/HYSTERESIS
+ * in ABS() so switch points stay correct for negative parameter values; add direct UP/DOWN transitions so INPUT
+ * crossing both switch-on thresholds within one REQ no longer causes a spurious one-cycle Neutral output
+ ***     3.0: 2025-04-14/Patrick Aigner -  - changed package
  ***     1.0: 2023-06-06/Franz Höpfinger - HR Agrartechnik GmbH -
  *************************************************************************/
 
@@ -19,6 +24,8 @@
 
 #include "forte/datatypes/forte_bool.h"
 #include "forte/datatypes/forte_real.h"
+#include "forte/forte_st_util.h"
+#include "forte/iec61131_functions/func_ABS.h"
 #include "forte/iec61131_functions/func_ADD.h"
 #include "forte/iec61131_functions/func_EQ.h"
 #include "forte/iec61131_functions/func_GE.h"
@@ -26,21 +33,20 @@
 #include "forte/iec61131_functions/func_LE.h"
 #include "forte/iec61131_functions/func_LT.h"
 #include "forte/iec61131_functions/func_SUB.h"
-#include "forte/datatypes/forte_array_common.h"
-#include "forte/datatypes/forte_array.h"
-#include "forte/datatypes/forte_array_fixed.h"
-#include "forte/datatypes/forte_array_variable.h"
 
+using namespace std::literals;
 using namespace forte::literals;
 
 namespace forte::eclipse4diac::signalprocessing {
   namespace {
-    const auto cDataInputNames = std::array{"QI"_STRID, "MI"_STRID, "DEAD"_STRID, "HYSTERESIS"_STRID, "INPUT"_STRID};
-    const auto cDataOutputNames = std::array{"QO"_STRID, "DO_UP"_STRID, "DO_DOWN"_STRID};
+    constexpr std::string_view TypeHash = ""sv;
+
     const auto cEventInputNames = std::array{"INIT"_STRID, "REQ"_STRID};
     const auto cEventInputTypeIds = std::array{"EInit"_STRID, "Event"_STRID};
     const auto cEventOutputNames = std::array{"INITO"_STRID, "CNF"_STRID};
     const auto cEventOutputTypeIds = std::array{"EInit"_STRID, "Event"_STRID};
+    const auto cDataInputNames = std::array{"QI"_STRID, "MI"_STRID, "DEAD"_STRID, "HYSTERESIS"_STRID, "INPUT"_STRID};
+    const auto cDataOutputNames = std::array{"QO"_STRID, "DO_UP"_STRID, "DO_DOWN"_STRID};
     const SFBInterfaceSpec cFBInterfaceSpec = {
         .mEINames = cEventInputNames,
         .mEITypeNames = cEventInputTypeIds,
@@ -54,7 +60,7 @@ namespace forte::eclipse4diac::signalprocessing {
     };
   } // namespace
 
-  DEFINE_FIRMWARE_FB(FORTE_DualHysteresis, "eclipse4diac::signalprocessing::DualHysteresis"_STRID)
+  DEFINE_FIRMWARE_FB(FORTE_DualHysteresis, "eclipse4diac::signalprocessing::DualHysteresis"_STRID, TypeHash)
 
   FORTE_DualHysteresis::FORTE_DualHysteresis(const StringId paInstanceNameId, CFBContainer &paContainer) :
       CBasicFB(paContainer, cFBInterfaceSpec, paInstanceNameId, {}),
@@ -106,7 +112,11 @@ namespace forte::eclipse4diac::signalprocessing {
             return; // no transition cleared
           break;
         case scmStateUP:
-          if ((scmEventREQID == paEIID) && (func_LT(var_INPUT, func_ADD<CIEC_REAL>(var_MI, var_DEAD))))
+          if ((scmEventREQID == paEIID) &&
+              (func_LE(var_INPUT,
+                       func_SUB<CIEC_REAL>(func_SUB<CIEC_REAL>(var_MI, func_ABS(var_DEAD)), func_ABS(var_HYSTERESIS)))))
+            enterStateDOWN(paECET);
+          else if ((scmEventREQID == paEIID) && (func_LT(var_INPUT, func_ADD<CIEC_REAL>(var_MI, func_ABS(var_DEAD)))))
             enterStateNeutral(paECET);
           else
             return; // no transition cleared
@@ -115,10 +125,12 @@ namespace forte::eclipse4diac::signalprocessing {
           if ((scmEventINITID == paEIID) && (func_EQ(false_BOOL, var_QI)))
             enterStateDeInit(paECET);
           else if ((scmEventREQID == paEIID) &&
-                   (func_GE(var_INPUT, func_ADD<CIEC_REAL>(func_ADD<CIEC_REAL>(var_MI, var_DEAD), var_HYSTERESIS))))
+                   (func_GE(var_INPUT, func_ADD<CIEC_REAL>(func_ADD<CIEC_REAL>(var_MI, func_ABS(var_DEAD)),
+                                                           func_ABS(var_HYSTERESIS)))))
             enterStateUP(paECET);
           else if ((scmEventREQID == paEIID) &&
-                   (func_LE(var_INPUT, func_SUB<CIEC_REAL>(func_SUB<CIEC_REAL>(var_MI, var_DEAD), var_HYSTERESIS))))
+                   (func_LE(var_INPUT, func_SUB<CIEC_REAL>(func_SUB<CIEC_REAL>(var_MI, func_ABS(var_DEAD)),
+                                                           func_ABS(var_HYSTERESIS)))))
             enterStateDOWN(paECET);
           else
             return; // no transition cleared
@@ -130,7 +142,11 @@ namespace forte::eclipse4diac::signalprocessing {
             return; // no transition cleared
           break;
         case scmStateDOWN:
-          if ((scmEventREQID == paEIID) && (func_GT(var_INPUT, func_SUB<CIEC_REAL>(var_MI, var_DEAD))))
+          if ((scmEventREQID == paEIID) &&
+              (func_GE(var_INPUT,
+                       func_ADD<CIEC_REAL>(func_ADD<CIEC_REAL>(var_MI, func_ABS(var_DEAD)), func_ABS(var_HYSTERESIS)))))
+            enterStateUP(paECET);
+          else if ((scmEventREQID == paEIID) && (func_GT(var_INPUT, func_SUB<CIEC_REAL>(var_MI, func_ABS(var_DEAD)))))
             enterStateNeutral(paECET);
           else
             return; // no transition cleared
@@ -200,12 +216,12 @@ namespace forte::eclipse4diac::signalprocessing {
   void FORTE_DualHysteresis::writeOutputData(const TEventID paEIID) {
     switch (paEIID) {
       case scmEventINITOID: {
-        writeData(cFBInterfaceSpec.getNumDIs() + 0, var_QO, conn_QO);
+        writeData(5, var_QO, conn_QO);
         break;
       }
       case scmEventCNFID: {
-        writeData(cFBInterfaceSpec.getNumDIs() + 1, var_DO_UP, conn_DO_UP);
-        writeData(cFBInterfaceSpec.getNumDIs() + 2, var_DO_DOWN, conn_DO_DOWN);
+        writeData(6, var_DO_UP, conn_DO_UP);
+        writeData(7, var_DO_DOWN, conn_DO_DOWN);
         break;
       }
       default: break;
