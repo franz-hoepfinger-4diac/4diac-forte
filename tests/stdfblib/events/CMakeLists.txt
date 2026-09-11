@@ -21,6 +21,10 @@
 
 forte_test_add_sourcefile_cpp(E_F_TRIG_tester.cpp)
 forte_test_add_sourcefile_cpp(E_PERMIT_tester.cpp)
+forte_test_add_sourcefile_cpp(GEN_E_PERMIT_1_tester.cpp)
+forte_test_add_sourcefile_cpp(GEN_E_PERMIT_2_tester.cpp)
+forte_test_add_sourcefile_cpp(GEN_E_PERMIT_3_tester.cpp)
+forte_test_add_sourcefile_cpp(GEN_E_PERMIT_4_tester.cpp)
 forte_test_add_sourcefile_cpp(E_R_TRIG_tester.cpp)
 forte_test_add_sourcefile_cpp(E_SR_tester.cpp)
 forte_test_add_sourcefile_cpp(E_SELECT_tester.cpp)
