@@ -474,7 +474,7 @@ namespace forte::com_infra::opc_ua {
   }
 
   bool CUA_ClientInformation::createSubscription() {
-    if (0 != mSubscriptionInfo.mSubscriptionId) { // already have a subscription, all actions share it
+    if (mSubscriptionInfo.mSubscriptionId != 0) { // already have a subscription, all actions share it
       return true;
     }
 
@@ -574,7 +574,7 @@ namespace forte::com_infra::opc_ua {
     // delete's confirmation, or an unsolicited server-side deletion). Guarded so this runs
     // exactly once even if open62541 invokes that callback synchronously from within
     // UA_Client_Subscriptions_deleteSingle() above.
-    if (0 != mSubscriptionInfo.mSubscriptionId) {
+    if (mSubscriptionInfo.mSubscriptionId != 0) {
       removeAsyncCall();
       mSubscriptionInfo.mSubscriptionId = 0;
       mSubscriptionInfo.mMonitoredItems.clear();
